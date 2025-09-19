@@ -64,7 +64,6 @@ class CustomUserCreationForm(UserCreationForm):
 
 
 
-<<<<<<< HEAD
 class LoginForm(forms.Form):
     username = forms.CharField(
         label='username',
@@ -112,5 +111,3 @@ class CustomPasswordChangeForm(PasswordChangeForm):
         label="confirm new password",
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'confirm new password'}),
     ) 
-=======
->>>>>>> 4871b27bece5dc1d3735e1de046b4bef6caf0e49

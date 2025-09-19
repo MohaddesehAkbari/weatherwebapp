@@ -19,7 +19,6 @@ from .views import register_view, login_view, logout_view, profile_view, edit_pr
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
-<<<<<<< HEAD
     path('register/', register_view, name='register'),
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
@@ -38,6 +37,3 @@ urlpatterns = [
     # صفحه‌ی موفقیت
     path('reset/done/', auth_views.PasswordResetCompleteView.as_view(template_name='accounts/password_reset_complete.html'), name='password_reset_complete'),
 ]
-=======
-    path('register/', register_view, name='register'),]
->>>>>>> 4871b27bece5dc1d3735e1de046b4bef6caf0e49

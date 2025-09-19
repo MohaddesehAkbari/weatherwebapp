@@ -13,18 +13,12 @@ def register_view(request):
         form = CustomUserCreationForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save()
-<<<<<<< HEAD
             login(request, user)  #  این خط باعث لاگین خودکار می‌شه
             messages.success(request, "Registration was successful and you are logged in.")
-=======
-            login(request, user)  # 👈 این خط باعث لاگین خودکار می‌شه
-            messages.success(request, "ثبت‌نام با موفقیت انجام شد و وارد شدید.")
->>>>>>> 4871b27bece5dc1d3735e1de046b4bef6caf0e49
             return redirect('home')
     else:
         form = CustomUserCreationForm()
     return render(request, 'accounts/register.html', {'form': form})
-<<<<<<< HEAD
 
 
 def login_view(request):
@@ -80,5 +74,3 @@ class CustomPasswordChangeView(PasswordChangeView):
     def form_valid(self, form):
         messages.success(self.request, "Password changed successfully.")
         return super().form_valid(form)
-=======
->>>>>>> 4871b27bece5dc1d3735e1de046b4bef6caf0e49
