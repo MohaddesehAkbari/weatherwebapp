@@ -1,0 +1,322 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>weather status</title>
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <link rel="stylesheet" href="{% static 'leaflet/leaflet.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{% static 'leaflet/leaflet.js' %}"></script>
+</head>
+
+<body>
+    <!-- سایدبار -->
+    <div id="sidebar">
+        <div id="authSection" class="auth-links" style="margin-bottom: 20px;">
+            {% if user.is_authenticated %}
+                <span>Hi {{ user.first_name }} 👋</span>
+                <a href="{% url 'profile' %}" class="profile-btn">profile</a>
+                <a href="{% url 'logout' %}" class="logout-btn">logout</a>
+            {% else %}
+                <a href="{% url 'login' %}" class="auth-btn">login</a> |
+                <a href="{% url 'register' %}" class="auth-btn">register</a>
+            {% endif %}
+        </div>
+
+        <h1 style="color: rgb(84, 90, 84);">Weather Forecasting System</h1>
+        <input type="text" id="cityInput" placeholder="e.g: Tehran">
+        <button onclick="searchCity()">search city</button>
+
+        <div id="weatherPanel" class="hidden">
+            <div id="weatherInfo"></div>
+            <button id="showForecastBtn" onclick="getForecast()" class="forecastbtn">Show 5-day forecast</button>
+        </div>
+    </div>
+
+    <!-- نقشه -->
+    <div id="map"></div>
+
+    <!-- مودال پیش‌بینی -->
+    <div id="forecastModal" class="popup-overlay hidden">
+        <div class="popup-content">
+            <button onclick="closeModal()" class="close-btn">
+                <i class="fas fa-times"></i>
+            </button>
+            <h3>5-days forecast</h3>
+            <table id="forecastTable">
+                <thead style="background-color: rgb(156, 156, 255);">
+                    <tr>
+                        <th>date</th>
+                        <th>status</th>
+                        <th>temperature (°C)</th>
+                        <th>humidity (%)</th>
+                        <th>wind speed (m/s)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <canvas id="tempChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let lastClickedLat = null;
+        let lastClickedLon = null;
+        let currentMarker = null; 
+
+        const map = L.map('map').setView([35.1054, 53.6405], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        map.zoomControl.setPosition('bottomleft');
+
+        
+        window.addEventListener("load", function () {
+            const savedLat = localStorage.getItem("lat");
+            const savedLon = localStorage.getItem("lon");
+
+            if (savedLat && savedLon) {
+                lastClickedLat = parseFloat(savedLat);
+                lastClickedLon = parseFloat(savedLon);
+
+                // ایجاد مارکر مجدد
+                currentMarker = L.marker([lastClickedLat, lastClickedLon])
+                    .addTo(map)
+                    .bindPopup(`
+                        <div>
+                            <p>latitude: ${lastClickedLat.toFixed(4)}</p>
+                            <p>longitude: ${lastClickedLon.toFixed(4)}</p>
+                            <button onclick="removeMarker()" style="margin-top:5px;background:#d9534f;color:white;border:none;padding:5px 10px;border-radius:5px;">🗑 remove</button>
+                        </div>
+                    `)
+                    .openPopup();
+
+                // رفتن به موقعیت
+                map.setView([lastClickedLat, lastClickedLon], 8);
+
+                // گرفتن داده هواشناسی مجدد
+                fetch(`/weather/get_weather/?lat=${lastClickedLat}&lon=${lastClickedLon}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data.error) {
+                            displayWeather(data);
+                        }
+                    });
+            }
+            if (window.location.pathname === "/logout/") {
+                localStorage.removeItem("lat");
+                localStorage.removeItem("lon");
+            }
+        });
+
+        map.on('click', function(e) {
+            lastClickedLat = e.latlng.lat;
+            lastClickedLon = e.latlng.lng;
+
+            localStorage.setItem("lat", lastClickedLat);
+            localStorage.setItem("lon", lastClickedLon);
+
+            // حذف مارکر قبلی
+            if (currentMarker) {
+                map.removeLayer(currentMarker);
+            }
+
+            // ایجاد مارکر جدید با popup شامل lat و lon
+            currentMarker = L.marker([lastClickedLat, lastClickedLon])
+                .addTo(map)
+                .bindPopup(`
+                    <div>
+                        <p>latitude: ${lastClickedLat.toFixed(4)}</p>
+                        <p>longitude: ${lastClickedLon.toFixed(4)}</p>
+                        <button onclick="removeMarker()" style="margin-top:5px;background:#d9534f;color:white;border:none;padding:5px 10px;border-radius:5px;">🗑 remove</button>
+                    </div>
+                `)
+                .openPopup();
+
+            fetch(`/weather/get_weather/?lat=${lastClickedLat}&lon=${lastClickedLon}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) alert(data.error);
+                    else {
+                        displayWeather(data);
+                        map.setView([lastClickedLat, lastClickedLon], 8);
+                    }
+                }).catch(() => alert("Error receiving weather information"));
+        });
+
+        function searchCity() {
+            const city = document.getElementById("cityInput").value;
+            if (!city) return alert("Enter the city name.");
+
+            fetch(`/weather/search_city/?q=${city}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) alert(data.error);
+                    else {
+                        lastClickedLat = data.coord.lat;
+                        lastClickedLon = data.coord.lon;
+
+                        localStorage.setItem("lat", lastClickedLat);
+                        localStorage.setItem("lon", lastClickedLon);
+
+                        // حذف مارکر قبلی
+                        if (currentMarker) {
+                            map.removeLayer(currentMarker);
+                        }
+
+                        // ایجاد مارکر جدید با popup شامل lat و lon
+                        currentMarker = L.marker([lastClickedLat, lastClickedLon])
+                            .addTo(map)
+                            .bindPopup(`
+                                <div>
+                                    <p>latitude: ${lastClickedLat.toFixed(4)}</p>
+                                    <p>longitude: ${lastClickedLon.toFixed(4)}</p>
+                                    <button onclick="removeMarker()" style="margin-top:5px;background:#d9534f;color:white;border:none;padding:5px 10px;border-radius:5px;">🗑 remove</button>
+                                </div>
+                            `)
+                            .openPopup();
+
+                        map.setView([lastClickedLat, lastClickedLon], 8);
+                        displayWeather(data);
+                    }
+                }).catch(() => alert("Error searching for city"));
+        }
+            function displayWeather(data) {
+                document.getElementById("weatherPanel").style.display = "block";
+                document.getElementById("weatherInfo").innerHTML = `
+                    <h3 class="weather-item-name">${data.name}</h3>
+                    <div class="weather-row">
+                        <div class="weather-item">
+                            <img src="{% static 'images/cloudy.png' %}" alt="status">
+                            <span>${data.weather[0].description}</span>
+                        </div>
+                        <div class="weather-item">
+                            <img src="{% static 'images/high-temperature.png' %}" alt="temperature">
+                            <span>${data.main.temp}°C</span>
+                        </div>
+                    </div>
+                    <div class="weather-row">
+                        <div class="weather-item">
+                            <img src="{% static 'images/humidity.png' %}" alt="humidity">
+                            <span>${data.main.humidity}%</span>
+                        </div>
+                        <div class="weather-item">
+                            <img src="{% static 'images/wind.png' %}" alt="wind speed">
+                            <span>${data.wind.speed} m/s</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+        function getForecast() {
+            if (!lastClickedLat || !lastClickedLon)
+                return alert("First, choose a location!");
+
+            fetch(`/weather/get_forecast/?lat=${lastClickedLat}&lon=${lastClickedLon}`)
+                .then(res => {
+                    if (res.redirected) {
+                        // کاربر وارد نشده → ریدایرکت شده به login
+                        window.location.href = res.url;
+                        return;
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    if (!data) return;  // در صورت ریدایرکت، ادامه نده
+
+                    if (data.error) alert(data.error);
+                    else if (data.daily) showForecast(data.daily);
+                    else alert("No data found for prediction.");
+                })
+                .catch(() => alert("Error retrieving forecast"));
+        }
+
+        function showForecast(daily) {
+            const modal = document.getElementById("forecastModal");
+            const tbody = document.querySelector("#forecastTable tbody");
+            const labels = [], temps = [], wind = [];
+
+            tbody.innerHTML = "";
+            daily.forEach(day => {
+                const date = new Date(day.dt_txt).toLocaleDateString('en-US');    //.toLocaleDateString('fa-IR')
+                const weather = day.weather[0].description;
+                const temp = day.main.temp;
+                const humidity = day.main.humidity;
+                const windspeed = day.wind.speed;
+
+                labels.push(date);
+                temps.push(temp);
+                wind.push(windspeed);
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${date}</td>
+                        <td>${weather}</td>
+                        <td>${temp}</td>
+                        <td>${humidity}</td>
+                        <td>${windspeed}</td>
+                    </tr>`;
+            });
+
+            modal.classList.remove("hidden");
+            renderChart(labels, temps, wind);
+        }
+
+        function closeModal() {
+            document.getElementById("forecastModal").classList.add("hidden");
+        }
+
+        let chart = null;
+        function renderChart(labels, temps, wind) {
+            const ctx = document.getElementById("tempChart").getContext("2d");
+            if (chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: "temperature (°C)",
+                        data: temps,
+                        borderColor: "red",
+                        backgroundColor: "rgba(255, 30, 30, 0.2)",
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: "wind speed (m/s)",
+                        data: wind,
+                        borderColor: "blue",
+                        backgroundColor: "#4240af7a",
+                        tension: 0.4,
+                        fill: true
+                    }
+                    
+                ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `${ctx.raw} (°C)`  
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        function removeMarker() {
+            if (currentMarker) {
+                map.removeLayer(currentMarker);
+                currentMarker = null;
+                lastClickedLat = null;
+                lastClickedLon = null;
+                localStorage.removeItem("lat");
+                localStorage.removeItem("lon");
+                document.getElementById("weatherPanel").style.display = "none";
+            }
+        }
+        
+    </script>
+</body>
+</html>
