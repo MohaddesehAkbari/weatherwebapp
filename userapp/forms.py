@@ -3,28 +3,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.forms import PasswordChangeForm
 from .models import CustomUser
 
-# class CustomUserCreationForm(UserCreationForm):
-#     email = forms.EmailField(required=True, label="ایمیل",)
-#     password1 = forms.CharField(
-#         label="رمز عبور",
-#         strip=False,
-#         widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}),
-#     )
-#     password2 = forms.CharField(
-#         label="تأیید رمز عبور",
-#         widget=forms.PasswordInput(attrs={"autocomplete": "new-password"}),
-#         strip=False,
-#     )
 
-#     class Meta:
-#         model = CustomUser
-#         fields = ('username', 'first_name', 'last_name', 'email', 'profile_image', 'password1', 'password2')
-#         labels = {
-#             'username': 'نام کاربری',
-#             'first_name': 'نام',
-#             'last_name': 'نام خانوادگی',
-#             'profile_image': 'عکس پروفایل',
-#         }
 class CustomUserCreationForm(UserCreationForm):
     email = forms.CharField(
         required=True, 

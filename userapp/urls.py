@@ -28,7 +28,7 @@ urlpatterns = [
         # صفحه وارد کردن ایمیل
     path('password-reset/', auth_views.PasswordResetView.as_view(template_name='accounts/password_reset.html'), name='password_reset'),
 
-    # صفحه‌ای که می‌گه ایمیل ارسال شد
+    # صفحه‌ای که می‌گوید ایمیل ارسال شد
     path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='accounts/password_reset_done.html'), name='password_reset_done'),
 
     # صفحه تعیین رمز جدید (لینک داخل ایمیل کاربر)

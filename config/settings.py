@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-)o!_*4e)-1ye0^&c=34ur)*+gg&za^y375%g+w(b$vqnx3bn2&'
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -49,8 +50,7 @@ INSTALLED_APPS = [
 ]
 
 
-#OPENWEATHER_API_KEY = '49b27c0cd858475f878104088633ce28'
-OPENWEATHER_API_KEY = 'fc9ba9b2168850c4ac84291e6b9af4b8'
+OPENWEATHER_API_KEY = config('OPENWEATHER_API_KEY')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
